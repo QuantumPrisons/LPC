@@ -75,12 +75,33 @@ public final class LPC extends JavaPlugin implements Listener {
 				.replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
 				.replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
 
-		format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
+        String finalFormat = format;
+        event.getRecipients().forEach(receiver -> {
+            String msg = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? prasePlaceholders(finalFormat, player, receiver) : finalFormat));
+            msg = msg.replace("{message}", player.hasPermission("lpc.colorcodes") && player.hasPermission("lpc.rgbcodes")
+                    ? colorize(translateHexColorCodes(message)) : player.hasPermission("lpc.colorcodes") ? colorize(message) : player.hasPermission("lpc.rgbcodes")
+                    ? translateHexColorCodes(message) : message);
+            receiver.sendMessage(msg);
+        });
 
-		event.setFormat(format.replace("{message}", player.hasPermission("lpc.colorcodes") && player.hasPermission("lpc.rgbcodes")
-				? colorize(translateHexColorCodes(message)) : player.hasPermission("lpc.colorcodes") ? colorize(message) : player.hasPermission("lpc.rgbcodes")
-				? translateHexColorCodes(message) : message).replace("%", "%%"));
-	}
+        // To use normal (not player relation) placeholders for console
+        format = format.replace("%rel_", "%");
+
+        format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
+        format = format.replace("{message}", player.hasPermission("lpc.colorcodes") && player.hasPermission("lpc.rgbcodes")
+                ? colorize(translateHexColorCodes(message)) : player.hasPermission("lpc.colorcodes") ? colorize(message) : player.hasPermission("lpc.rgbcodes")
+                ? translateHexColorCodes(message) : message).replace("%", "%%");
+        event.setFormat(format);
+
+        // Clearing list instead of canceling event to show message in the console
+        event.getRecipients().clear();
+    }
+
+    private String prasePlaceholders(String text, Player sender, Player receiver) {
+        text = PlaceholderAPI.setPlaceholders(sender, text);
+        text = PlaceholderAPI.setRelationalPlaceholders(receiver, sender, text);
+        return text;
+    }
 
 	private String colorize(final String message) {
 		return ChatColor.translateAlternateColorCodes('&', message);
